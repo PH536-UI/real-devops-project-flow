@@ -1,3 +1,4 @@
+
 # docker-compose.local.yml
 services:
   floci:
@@ -148,375 +149,155 @@ providers:
     editable: true
     options:
       path: /var/lib/grafana/dashboards
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# modules/observability/main.tf (para AWS real)
+
+# Amazon Managed Prometheus (AMP)
+resource "aws_prometheus_workspace" "main" {
+  alias = "${local.name_prefix}-metrics"
+
+  tags = local.common_tags
+}
+
+# Amazon Managed Grafana (AMG)
+resource "aws_grafana_workspace" "main" {
+  name                     = "${local.name_prefix}-grafana"
+  account_access_type      = "CURRENT_ACCOUNT"
+  authentication_providers = ["AWS_SSO"]
+  permission_type          = "SERVICE_MANAGED"
+  role_arn                 = aws_iam_role.grafana.arn
+
+  tags = local.common_tags
+}
+
+# IAM Role para Grafana
+resource "aws_iam_role" "grafana" {
+  name = "${local.name_prefix}-grafana-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "grafana.amazonaws.com"
+      }
+    }]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "grafana_cloudwatch" {
+  role       = aws_iam_role.grafana.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonGrafanaCloudWatchAccess"
+}
+
+# environments/local/docker.tf
+
+# Prometheus Container
+resource "docker_container" "prometheus" {
+  name  = "prometheus"
+  image = docker_image.prometheus.image_id
+
+  ports {
+    internal = 9090
+    external = 9090
+  }
+
+  volumes {
+    host_path      = "${path.module}/../../observability/prometheus.yml"
+    container_path = "/etc/prometheus/prometheus.yml"
+    read_only      = true
+  }
+
+  networks_advanced {
+    name = docker_network.infra_net.name
+  }
+
+  command = [
+    "--config.file=/etc/prometheus/prometheus.yml",
+    "--storage.tsdb.path=/prometheus",
+    "--storage.tsdb.retention.time=15d",
+    "--web.enable-lifecycle"
+  ]
+
+  depends_on = [docker_container.floci]
+}
+
+resource "docker_image" "prometheus" {
+  name = "prometheus:latest"
+}
+
+# Grafana Container
+resource "docker_container" "grafana" {
+  name  = "grafana"
+  image = docker_image.grafana.image_id
+
+  ports {
+    internal = 3000
+    external = 3000
+  }
+
+  env = [
+    "GF_SECURITY_ADMIN_USER=admin",
+    "GF_SECURITY_ADMIN_PASSWORD=admin",
+    "GF_USERS_ALLOW_SIGN_UP=false"
+  ]
+
+  volumes {
+    host_path      = "${path.module}/../../observability/grafana/provisioning"
+    container_path = "/etc/grafana/provisioning"
+    read_only      = true
+  }
+
+  networks_advanced {
+    name = docker_network.infra_net.name
+  }
+
+  depends_on = [docker_container.prometheus]
+}
+
+resource "docker_image" "grafana" {
+  name = "grafana/grafana:latest"
+}
+
+# Floci Container
+resource "docker_container" "floci" {
+  name  = "floci-aws"
+  image = docker_image.floci.image_id
+
+  ports {
+    internal = 4566
+    external = 4566
+  }
+
+  env = [
+    "FLOCI_DEFAULT_REGION=us-east-1",
+    "FLOCI_DEFAULT_ACCOUNT_ID=000000000000",
+    "FLOCI_STORAGE_MODE=hybrid",
+    "FLOCI_SERVICES_LAMBDA_EPHEMERAL=true"
+  ]
+
+  volumes {
+    host_path      = "/var/run/docker.sock"
+    container_path = "/var/run/docker.sock"
+    read_only      = false
+  }
+
+  networks_advanced {
+    name = docker_network.infra_net.name
+  }
+}
+
+resource "docker_image" "floci" {
+  name = "floci/floci:latest"
+}
+
+# Network compartilhada
+resource "docker_network" "infra_net" {
+  name   = "infra-net"
+  driver = "bridge"
+}
 
 
 
