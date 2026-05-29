@@ -1,6 +1,4 @@
-node_modules/
-.terraform/
-.terraform.lock.hcl
-*.tfstate*
+*.tfstate
+*.tfstate.*
+*.backup
 *.zip
-*.log
