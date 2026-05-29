@@ -1,1 +1,0 @@
-{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"ecs","Source":"../../modules/ecs_fargate","Dir":"../../modules/ecs_fargate"},{"Key":"kms","Source":"../../modules/kms","Dir":"../../modules/kms"},{"Key":"s3","Source":"../../modules/s3","Dir":"../../modules/s3"},{"Key":"vpc","Source":"../../modules/vpc","Dir":"../../modules/vpc"}]}
