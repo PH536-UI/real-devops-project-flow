@@ -1,0 +1,21 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v3
+
+      - name: Build da imagem Docker
+        run: docker build -t real-devops-project:latest .
+
+      - name: Teste de Integracao
+        run: |
+          docker run -d -p 3000:3000 --name test-app real-devops-project:latest
+          sleep 10
+          curl -f http://localhost:3000 || exit 1
