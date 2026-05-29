@@ -1,22 +1,16 @@
-# variables.tf
-variable "aws_endpoint" {
-  description = "Endpoint customizado para emulador local (Floci). Deixe null para AWS real."
-  type        = string
-  default     = null
-}
+provider "aws" {
+  region                      = "us-east-1"
+  access_key                  = "test"
+  secret_key                  = "test"
+  skip_credentials_validation = true
+  skip_metadata_api_check     = true
+  skip_requesting_account_id  = true
+  s3_use_path_style           = true
 
-variable "aws_region" {
-  description = "Região AWS"
-  type        = string
-  default     = "us-east-1"
-}
-
-variable "environment" {
-  description = "Ambiente de deploy (local, dev, staging, prod)"
-  type        = string
-  validation {
-    condition     = contains(["local", "dev", "staging", "prod"], var.environment)
-    error_message = "Environment deve ser local, dev, staging ou prod."
+  endpoints {
+    ecs = "http://localhost:4568"
+    ec2 = "http://localhost:4568"
+    s3  = "http://localhost:4568"
+    kms = "http://localhost:4568"
   }
-}O
-
+}

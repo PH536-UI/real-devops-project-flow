@@ -15,3 +15,9 @@ graph TD
     TF2 --> CW[CloudWatch] --> Managed[AMP/AMG Managed] --> GrafCloud[Grafana Cloud]
     end
 ```
+
+## Acesso aos Serviços (Local)
+Após rodar o script de início, os serviços estarão disponíveis em:
+- **Floci (AWS Mock):** http://localhost:4568
+- **Grafana:** http://localhost:3002
+- **Prometheus:** http://localhost:9092
