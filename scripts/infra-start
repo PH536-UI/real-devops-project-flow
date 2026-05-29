@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -e
+echo "Subindo infraestrutura..."
+docker compose -f docker-compose.local.yml up -d
+echo "Pronto!"

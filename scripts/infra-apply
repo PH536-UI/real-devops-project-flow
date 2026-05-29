@@ -1,0 +1,6 @@
+#!/bin/bash
+echo "Entrando no diretório de ambiente local..."
+cd $(dirname "$0")/../environments/local
+
+echo "Executando Terraform Apply..."
+terraform apply -var="environment=local"
